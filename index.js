@@ -15,12 +15,25 @@ var elixir   = require('laravel-elixir'),
  |
  */
 
+
+
+
 elixir.extend('behat', function(baseDir, options, watchList) {
 
 	baseDir = baseDir || 'tests/features';
 	options = _.extend( { notify: true } , options);
+	var fnTask = function(name,fn) {
+	   var args = Array.prototype.slice.call(arguments);
+	   if(elixir.Task){
+		return new elixir.Task(name,fn)
+	   }else{
+		gulp.task(name,fn);
+		this.queueTask('behat');
+		return null;
+	   }	
+	};
 
-	gulp.task('behat', function() {
+	var _task = fnTask.call(this,'behat', function(){
 		gulp.src('behat.yml')
 			.pipe(behat('', options))
 			.on('error', notify.onError({
@@ -34,8 +47,9 @@ elixir.extend('behat', function(baseDir, options, watchList) {
 				icon: __dirname + '/../laravel-elixir/icons/pass.png'
 			}));
 	});
+	
 
-	this.queueTask('behat');
+	
 
 	// default watch files
 	var tddList = [
@@ -45,8 +59,11 @@ elixir.extend('behat', function(baseDir, options, watchList) {
 
 	// merge in users watch files (and remove duplicates if they exist)
 	tddList = _.union(tddList, watchList);
-
-	this.registerWatcher('behat', tddList, 'tdd');
+	if(null === _task){
+		this.registerWatcher('behat', tddList, 'tdd');
+	}else{
+		_task.watch(tddList,'tdd');
+	}
 
 });
 
